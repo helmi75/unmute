@@ -36,11 +36,12 @@ services:
       target: hot-reloading
     volumes:
       - ./unmute:/app/unmute
+    env_file:
+      - ./docker-compose.env
     environment:
       - KYUTAI_STT_URL=ws://stt:8080
       - KYUTAI_TTS_URL=ws://tts:8080
       - KYUTAI_LLM_URL=http://llm:8000
-      - NEWSAPI_API_KEY=$NEWSAPI_API_KEY
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.backend.rule=PathPrefix(`/api`)"
@@ -58,8 +59,8 @@ services:
     build:
       context: services/moshi-server
       dockerfile: public.Dockerfile
-    environment:
-      - HUGGING_FACE_HUB_TOKEN=$HUGGING_FACE_HUB_TOKEN
+    env_file:
+      - ./docker-compose.env
     volumes:
       - ./volumes/hf-cache:/root/.cache/huggingface
       - ./volumes/cargo-registry-tts:/root/.cargo/registry
@@ -81,8 +82,8 @@ services:
     build:
       context: services/moshi-server
       dockerfile: public.Dockerfile
-    environment:
-      - HUGGING_FACE_HUB_TOKEN=$HUGGING_FACE_HUB_TOKEN
+    env_file:
+      - ./docker-compose.env
     volumes:
       - ./volumes/hf-cache:/root/.cache/huggingface
       - ./volumes/cargo-registry-stt:/root/.cargo/registry
@@ -116,8 +117,8 @@ services:
     volumes:
       - ./volumes/hf-cache:/root/.cache/huggingface
       - ./volumes/vllm-cache:/root/.cache/vllm
-    environment:
-      - HUGGING_FACE_HUB_TOKEN=$HUGGING_FACE_HUB_TOKEN
+    env_file:
+      - ./docker-compose.env
     deploy:
       resources:
         reservations:
