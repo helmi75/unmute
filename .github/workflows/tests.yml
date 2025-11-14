@@ -1,0 +1,24 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - test_prod
+  pull_request:
+    branches:
+      - test_prod
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.7.12"
+
+      - name: Run tests
+        run: uv run pytest -v
