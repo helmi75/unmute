@@ -1,0 +1,73 @@
+name: Tests & Deploy
+
+on:
+  push:
+    branches:
+      - test_prod
+  pull_request:
+    branches:
+      - test_prod
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.7.12"
+
+      - name: Run tests
+        run: uv run pytest -v
+
+  deploy:
+    needs: tests
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/test_prod'
+    environment: unmute_secret
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to test server
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.TEST_SERVER_IP }}
+          port: ${{ secrets.TEST_SERVER_PORT }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          script: |
+            echo "=== DEPLOYMENT START ==="
+
+            # === CLONE OR UPDATE REPO VIA HTTPS ===
+            if [ ! -d "/home/helmi/unmute" ]; then
+              echo "Clone repository..."
+              mkdir -p /home/helmi
+              cd /home/helmi
+              git clone https://${{ secrets.GH_TOKEN }}@github.com/helmi75/unmute.git
+              cd unmute
+            else
+              echo "Pull last version..."
+              cd /home/helmi/unmute
+              git reset --hard
+              git clean -fd
+              git pull https://${{ secrets.GH_TOKEN }}@github.com/helmi75/unmute.git test_prod
+            fi
+
+            # === UPDATE ENV FILE ===
+            echo "=== Update .env file ==="
+            printf "NEWSAPI_API_KEY=%s\nHUGGING_FACE_HUB_TOKEN=%s\n" \
+            "${{ secrets.NEWSAPI_API_KEY }}" \
+            "${{ secrets.HUGGING_FACE_HUB_TOKEN }}" \
+            > /home/helmi/unmute/.env
+
+            # === RESTART DOCKER ===
+            echo "=== Restart Docker ==="
+            docker compose down
+            docker compose up --build -d
+
+            echo "=== DEPLOYMENT DONE ==="
